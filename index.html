@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小鳥兒唱歌 - 語文科互動遊戲</title>
+    <style>
+        /* 全局設置 */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Microsoft JhengHei", "Heiti TC", sans-serif;
+            overflow: hidden;
+            background-color: #FFF;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 頁面容器 */
+        .screen {
+            width: 100vw;
+            height: 100vh;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .active {
+            display: flex;
+        }
+
+        /* 首頁樣式 */
+        #start-screen {
+            background: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 100%);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            color: #006064;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .cover-image {
+            width: 350px;
+            height: 350px;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.2));
+        }
+
+        .btn {
+            background-color: #FF6F00;
+            color: white;
+            border: 4px solid #FFF;
+            padding: 25px 80px;
+            font-size: 2.5rem;
+            font-weight: bold;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+            background-color: #E65100;
+        }
+
+        /* 遊戲頁樣式 - 黑底高對比 */
+        #game-screen {
+            background-color: #000;
+            color: #FFF;
+        }
+
+        /* 動物容器 */
+        .character-container {
+            width: 90vw;
+            height: 70vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 1.5s ease-in;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .character-svg {
+            width: 100%;
+            height: 100%;
+            max-width: 600px; /* 放大圖像尺寸 */
+            max-height: 600px;
+            /* 增加白色發光邊緣，讓圖案在黑底更突出 */
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.6)); 
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-25px) rotate(2deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+
+        /* 點擊後的動畫 */
+        .clicked-anim {
+            animation: popAndFade 0.8s ease-out forwards;
+        }
+
+        @keyframes popAndFade {
+            0% { transform: scale(1); opacity: 1; }
+            40% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        /* 結束頁樣式 */
+        #end-screen {
+            background-color: #000;
+            color: #FFD700;
+        }
+        
+        .reward-text {
+            font-size: 5rem;
+            font-weight: bold;
+            animation: glow 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700; }
+            to { text-shadow: 0 0 20px #FF69B4, 0 0 30px #FF69B4; }
+        }
+
+        .particle {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 1. 開始頁面 -->
+    <div id="start-screen" class="screen active">
+        <h1>小鳥兒唱歌</h1>
+        <!-- 首頁封面圖 -->
+        <svg class="cover-image" viewBox="0 0 300 300">
+            <circle cx="150" cy="150" r="140" fill="#FFF" stroke="#00BCD4" stroke-width="8"/>
+            <!-- 樹枝 -->
+            <path d="M20,200 Q100,220 150,180 Q200,150 280,160" stroke="#795548" stroke-width="15" fill="none" stroke-linecap="round"/>
+            <!-- 小鳥 -->
+            <path d="M130,180 Q110,130 160,130 Q200,130 210,160 Q220,190 180,190 Z" fill="#FFEB3B" stroke="#333" stroke-width="3"/>
+            <circle cx="170" cy="145" r="5" fill="#000"/>
+            <path d="M190,145 L210,140 L195,155" fill="#FF9800"/>
+            <path d="M150,160 Q130,170 140,180" fill="none" stroke="#FBC02D" stroke-width="3"/>
+            <!-- 音符 -->
+            <text x="200" y="100" font-size="60" fill="#E91E63" font-weight="bold">♪</text>
+            <text x="240" y="130" font-size="40" fill="#9C27B0" font-weight="bold">♫</text>
+        </svg>
+        <button class="btn" onclick="startGame()">開始遊戲</button>
+    </div>
+
+    <!-- 2. 遊戲頁面 -->
+    <div id="game-screen" class="screen">
+        <div id="character-area" class="character-container" onclick="handleTap()">
+            <!-- SVG 內容由 JS 插入 -->
+        </div>
+    </div>
+
+    <!-- 3. 結束頁面 -->
+    <div id="end-screen" class="screen">
+        <h1 class="reward-text">做得好！</h1>
+        <div id="fireworks-container"></div>
+        <button class="btn" onclick="location.reload()" style="margin-top: 60px; border-color: #FFD700;">再玩一次</button>
+    </div>
+
+    <script>
+        // 精美的 SVG 數據庫
+        // 注意：stroke="white" stroke-width="4" 是為了在黑色背景上提供高對比輪廓
+        const gameData = [
+            {
+                id: 'bird',
+                name: '小鳥兒',
+                text: '小鳥兒唱歌，吱吱，吱吱。',
+                svg: `
+                    <g transform="translate(20, 20) scale(0.9)">
+                        <!-- 樹枝 -->
+                        <path d="M10,350 Q150,380 250,320 Q350,280 480,300" stroke="#8D6E63" stroke-width="20" fill="none" stroke-linecap="round"/>
+                        <path d="M250,320 Q280,250 260,220" stroke="#8D6E63" stroke-width="10" fill="none" stroke-linecap="round"/>
+                        <!-- 樹葉 -->
+                        <path d="M260,220 Q230,180 260,150 Q290,180 260,220" fill="#66BB6A" stroke="white" stroke-width="3"/>
+                        <path d="M260,220 Q300,200 320,230 Q280,250 260,220" fill="#81C784" stroke="white" stroke-width="3"/>
+                        <!-- 小鳥身體 -->
+                        <path d="M280,290 Q250,200 350,180 Q420,170 450,220 Q480,280 400,310 Q350,320 280,290" fill="#FFEB3B" stroke="white" stroke-width="5"/>
+                        <!-- 翅膀 -->
+                        <path d="M320,240 Q360,220 400,250 Q370,280 320,240" fill="#FBC02D" stroke="white" stroke-width="3"/>
+                        <!-- 眼睛 -->
+                        <circle cx="380" cy="210" r="12" fill="white"/>
+                        <circle cx="385" cy="210" r="5" fill="black"/>
+                        <!-- 嘴巴 (張開唱歌) -->
+                        <path d="M430,200 L460,190 L440,210 Z" fill="#FF9800" stroke="white" stroke-width="2"/>
+                        <path d="M430,215 L450,225 L435,225 Z" fill="#FF9800" stroke="white" stroke-width="2"/>
+                        <!-- 音符裝飾 -->
+                        <text x="450" y="150" font-size="60" fill="#00BCD4" stroke="white" stroke-width="2">♪</text>
+                    </g>
+                `
+            },
+            {
+                id: 'rain',
+                name: '小雨點',
+                text: '小雨點唱歌，沙沙，沙沙。',
+                svg: `
+                    <g transform="translate(50, 50) scale(0.8)">
+                        <!-- 雲朵 -->
+                        <path d="M50,150 Q50,80 120,80 Q140,40 200,40 Q260,40 280,80 Q350,80 350,150 Q350,220 280,220 L120,220 Q50,220 50,150 Z" fill="#E0F7FA" stroke="white" stroke-width="5"/>
+                        <!-- 雨滴 (不同顏色增加層次) -->
+                        <path d="M100,250 Q100,320 100,350 L100,250" stroke="#4FC3F7" stroke-width="8" stroke-linecap="round"/>
+                        <path d="M150,280 Q150,350 150,380 L150,280" stroke="#29B6F6" stroke-width="8" stroke-linecap="round"/>
+                        <path d="M200,240 Q200,310 200,340 L200,240" stroke="#03A9F4" stroke-width="8" stroke-linecap="round"/>
+                        <path d="M250,290 Q250,360 250,390 L250,290" stroke="#039BE5" stroke-width="8" stroke-linecap="round"/>
+                        <path d="M300,250 Q300,320 300,350 L300,250" stroke="#0288D1" stroke-width="8" stroke-linecap="round"/>
+                        <!-- 擬人化表情 -->
+                        <circle cx="160" cy="140" r="8" fill="#333"/>
+                        <circle cx="240" cy="140" r="8" fill="#333"/>
+                        <path d="M180,170 Q200,190 220,170" fill="none" stroke="#333" stroke-width="4" stroke-linecap="round"/>
+                    </g>
+                `
+            },
+            {
+                id: 'rooster',
+                name: '小公雞',
+                text: '小公雞唱歌，喔喔，喔喔。',
+                svg: `
+                    <g transform="translate(50, 20) scale(0.9)">
+                        <!-- 尾巴 (彩色) -->
+                        <path d="M350,250 Q450,150 400,100" fill="none" stroke="#009688" stroke-width="15" stroke-linecap="round"/>
+                        <path d="M350,260 Q460,200 420,120" fill="none" stroke="#4CAF50" stroke-width="15" stroke-linecap="round"/>
+                        <path d="M350,270 Q440,250 430,180" fill="none" stroke="#8BC34A" stroke-width="15" stroke-linecap="round"/>
+                        <!-- 身體 -->
+                        <path d="M150,150 Q250,100 350,250 Q350,350 250,350 Q150,350 150,250 Z" fill="#FF7043" stroke="white" stroke-width="5"/>
+                        <!-- 雞冠 (特徵：大紅色) -->
+                        <path d="M180,150 Q180,100 200,110 Q220,80 240,110 Q260,90 270,140" fill="#D32F2F" stroke="white" stroke-width="3"/>
+                        <!-- 脖子羽毛 -->
+                        <path d="M180,200 Q250,220 280,180" fill="none" stroke="#FFCC80" stroke-width="5"/>
+                        <!-- 眼睛 -->
+                        <circle cx="210" cy="180" r="8" fill="black"/>
+                        <!-- 嘴巴 -->
+                        <path d="M150,180 L120,190 L150,200" fill="#FFC107" stroke="white" stroke-width="2"/>
+                        <!-- 肉垂 -->
+                        <path d="M160,200 Q150,230 170,220" fill="#D32F2F" stroke="white" stroke-width="2"/>
+                        <!-- 腳 -->
+                        <path d="M200,350 L200,400 M200,400 L180,420 M200,400 L220,420" stroke="#FFC107" stroke-width="6" stroke-linecap="round"/>
+                        <path d="M280,350 L280,400 M280,400 L260,420 M280,400 L300,420" stroke="#FFC107" stroke-width="6" stroke-linecap="round"/>
+                    </g>
+                `
+            },
+            {
+                id: 'hen',
+                name: '小母雞',
+                text: '小母雞唱歌，咯咯，咯咯。',
+                svg: `
+                    <g transform="translate(50, 50) scale(0.9)">
+                        <!-- 身體 (圓潤) -->
+                        <ellipse cx="200" cy="200" rx="120" ry="100" fill="#FFD54F" stroke="white" stroke-width="5"/>
+                        <!-- 翅膀 -->
+                        <path d="M180,200 Q240,220 260,180" fill="none" stroke="#FFA000" stroke-width="5"/>
+                        <path d="M180,220 Q230,240 250,210" fill="none" stroke="#FFA000" stroke-width="5"/>
+                        <!-- 雞冠 (特徵：較小) -->
+                        <path d="M160,120 Q180,100 200,120 Q220,100 240,120 L240,130 L160,130 Z" fill="#E64A19" stroke="white" stroke-width="3"/>
+                        <!-- 眼睛 -->
+                        <circle cx="160" cy="170" r="8" fill="black"/>
+                        <!-- 嘴巴 -->
+                        <path d="M120,170 L100,180 L120,190" fill="#FF6F00" stroke="white" stroke-width="2"/>
+                        <!-- 窩/草 -->
+                        <path d="M80,280 Q200,350 320,280" fill="none" stroke="#8D6E63" stroke-width="10" stroke-linecap="round"/>
+                        <path d="M100,290 Q200,360 300,290" fill="none" stroke="#A1887F" stroke-width="8" stroke-linecap="round"/>
+                        <!-- 雞蛋 -->
+                        <ellipse cx="280" cy="290" rx="20" ry="25" fill="#FFF" stroke="#DDD" stroke-width="2"/>
+                    </g>
+                `
+            },
+            {
+                id: 'frog',
+                name: '小青蛙',
+                text: '小青蛙唱歌，呱呱，呱呱。',
+                svg: `
+                    <g transform="translate(50, 50) scale(0.9)">
+                        <!-- 荷葉 -->
+                        <path d="M20,250 Q150,350 380,250 Q300,150 100,200 Z" fill="#2E7D32" stroke="white" stroke-width="3"/>
+                        <path d="M200,250 L100,200" stroke="#1B5E20" stroke-width="3"/>
+                        <path d="M200,250 L300,200" stroke="#1B5E20" stroke-width="3"/>
+                        <!-- 青蛙身體 -->
+                        <ellipse cx="200" cy="200" rx="80" ry="60" fill="#76FF03" stroke="white" stroke-width="5"/>
+                        <!-- 後腿 -->
+                        <path d="M120,200 Q80,180 80,240 Q120,260 140,240" fill="#64DD17" stroke="white" stroke-width="4"/>
+                        <path d="M280,200 Q320,180 320,240 Q280,260 260,240" fill="#64DD17" stroke="white" stroke-width="4"/>
+                        <!-- 眼睛 (特徵：大而突出) -->
+                        <circle cx="160" cy="150" r="25" fill="#FFF" stroke="white" stroke-width="2"/>
+                        <circle cx="160" cy="150" r="10" fill="black"/>
+                        <circle cx="240" cy="150" r="25" fill="#FFF" stroke="white" stroke-width="2"/>
+                        <circle cx="240" cy="150" r="10" fill="black"/>
+                        <!-- 嘴巴 -->
+                        <path d="M160,220 Q200,240 240,220" fill="none" stroke="#33691E" stroke-width="4" stroke-linecap="round"/>
+                        <!-- 腮紅 -->
+                        <circle cx="140" cy="200" r="8" fill="#FF8A80" opacity="0.6"/>
+                        <circle cx="260" cy="200" r="8" fill="#FF8A80" opacity="0.6"/>
+                    </g>
+                `
+            },
+            {
+                id: 'kids',
+                name: '小朋友',
+                text: '小朋友唱歌：早晨！早晨！太陽高高照。背起書包上學去，老師好，同學早！',
+                svg: `
+                    <g transform="translate(20, 20) scale(0.9)">
+                        <!-- 太陽 (特徵：高高照) -->
+                        <circle cx="350" cy="50" r="40" fill="#FFEB3B" stroke="white" stroke-width="4"/>
+                        <line x1="350" y1="5" x2="350" y2="-15" stroke="#FFEB3B" stroke-width="5"/>
+                        <line x1="350" y1="95" x2="350" y2="115" stroke="#FFEB3B" stroke-width="5"/>
+                        <line x1="305" y1="50" x2="285" y2="50" stroke="#FFEB3B" stroke-width="5"/>
+                        <line x1="395" y1="50" x2="415" y2="50" stroke="#FFEB3B" stroke-width="5"/>
+                        
+                        <!-- 小朋友 -->
+                        <!-- 頭 -->
+                        <circle cx="150" cy="120" r="50" fill="#FFCCBC" stroke="white" stroke-width="4"/>
+                        <!-- 頭髮 -->
+                        <path d="M100,120 Q150,60 200,120" fill="#3E2723" stroke="white" stroke-width="2"/>
+                        <!-- 臉 -->
+                        <circle cx="135" cy="115" r="5" fill="black"/>
+                        <circle cx="165" cy="115" r="5" fill="black"/>
+                        <path d="M135,140 Q150,155 165,140" fill="none" stroke="#D84315" stroke-width="3" stroke-linecap="round"/>
+                        
+                        <!-- 身體 -->
+                        <path d="M100,180 L200,180 L200,280 L100,280 Z" fill="#42A5F5" stroke="white" stroke-width="4"/>
+                        <!-- 手 (揮手打招呼) -->
+                        <path d="M200,190 L240,160 L260,170" fill="none" stroke="#FFCCBC" stroke-width="12" stroke-linecap="round"/>
+                        <path d="M100,190 L70,240" fill="none" stroke="#FFCCBC" stroke-width="12" stroke-linecap="round"/>
+                        
+                        <!-- 書包 (特徵：背起書包) -->
+                        <path d="M200,190 L220,190 L220,260 L200,260" fill="#AB47BC" stroke="white" stroke-width="3"/>
+                        <rect x="210" y="200" width="30" height="50" fill="#AB47BC" stroke="white" stroke-width="3" rx="5"/>
+                        
+                        <!-- 腿 -->
+                        <path d="M130,280 L130,350" stroke="#1565C0" stroke-width="15" stroke-linecap="round"/>
+                        <path d="M170,280 L170,350" stroke="#1565C0" stroke-width="15" stroke-linecap="round"/>
+                        <!-- 鞋 -->
+                        <path d="M120,350 L150,350 L150,365 L120,365 Z" fill="#333"/>
+                        <path d="M160,350 L190,350 L190,365 L160,365 Z" fill="#333"/>
+                    </g>
+                `
+            }
+        ];
+
+        let currentIndex = 0;
+        let isSpeaking = false;
+        let synth = window.speechSynthesis;
+
+        function initSpeech() {
+            // 喚醒 iOS 語音引擎
+            const utterance = new SpeechSynthesisUtterance('');
+            synth.speak(utterance);
+        }
+
+        function startGame() {
+            initSpeech();
+            document.getElementById('start-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+            showCharacter();
+        }
+
+        function showCharacter() {
+            if (currentIndex >= gameData.length) {
+                endGame();
+                return;
+            }
+
+            const data = gameData[currentIndex];
+            const container = document.getElementById('character-area');
+            
+            container.style.opacity = '0';
+            container.classList.remove('clicked-anim');
+            
+            // 構建 SVG
+            container.innerHTML = `
+                <svg class="character-svg" viewBox="0 0 500 500">
+                    ${data.svg}
+                </svg>
+            `;
+
+            setTimeout(() => {
+                container.style.opacity = '1';
+                // 提示音：朗讀物件名稱
+                speak(data.name, 0.9); 
+            }, 200);
+        }
+
+        function handleTap() {
+            if (isSpeaking) return; 
+            
+            const container = document.getElementById('character-area');
+            const data = gameData[currentIndex];
+
+            // 視覺回饋
+            container.classList.add('clicked-anim');
+
+            // 聽覺回饋
+            speak(data.text, 1, () => {
+                currentIndex++;
+                setTimeout(showCharacter, 800); 
+            });
+        }
+
+        function speak(text, rate = 1, onEndCallback = null) {
+            synth.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-HK'; 
+            utterance.rate = rate; 
+            utterance.pitch = 1.1; 
+            utterance.volume = 1;
+
+            isSpeaking = true;
+
+            utterance.onend = () => {
+                isSpeaking = false;
+                if (onEndCallback) onEndCallback();
+            };
+
+            utterance.onerror = () => {
+                isSpeaking = false;
+                if (onEndCallback) onEndCallback();
+            };
+
+            synth.speak(utterance);
+        }
+
+        function endGame() {
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('end-screen').classList.add('active');
+            
+            // 修改後的讚賞語
+            speak("做得好！你完成了所有唱歌表演！");
+            
+            startFireworks();
+        }
+
+        function startFireworks() {
+            const container = document.getElementById('fireworks-container');
+            setInterval(() => {
+                createParticle(container);
+            }, 150);
+        }
+
+        function createParticle(container) {
+            const p = document.createElement('div');
+            p.classList.add('particle');
+            
+            const x = Math.random() * window.innerWidth;
+            const y = Math.random() * window.innerHeight;
+            
+            const colors = ['#FFD700', '#FF69B4', '#00BFFF', '#76FF03', '#FF5722'];
+            p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            
+            p.style.left = x + 'px';
+            p.style.top = y + 'px';
+            
+            container.appendChild(p);
+
+            const anim = p.animate([
+                { transform: 'scale(0)', opacity: 1 },
+                { transform: 'scale(1.5)', opacity: 1, offset: 0.5 },
+                { transform: `translate(${Math.random()*100 - 50}px, ${Math.random()*100 - 50}px) scale(0)`, opacity: 0 }
+            ], {
+                duration: 1200,
+                easing: 'ease-out'
+            });
+
+            anim.onfinish = () => p.remove();
+        }
+    </script>
+</body>
+</html>
